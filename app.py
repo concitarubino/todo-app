@@ -12,11 +12,11 @@ def load_tasks():
 
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = f.read().strip()
-            if not data:
+            content = f.read().strip()
+            if not content:
                 return []
-            return json.loads(data)
-    except (json.JSONDecodeError, OSError):
+            return json.loads(content)
+    except (json.JSONDecodeError, FileNotFoundError):
         return []
 
 
@@ -24,7 +24,7 @@ def save_tasks(tasks):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(tasks, f, ensure_ascii=False, indent=2)
-    except OSError:
+    except Exception:
         pass
 
 
