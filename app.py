@@ -2,25 +2,30 @@ from flask import Flask, render_template, request, redirect, url_for
 import json
 import os
 
-app = Flask(__name__)
-DATA_FILE = "tasks.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "tasks.json")
 
 
 def load_tasks():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    return data
-        except json.JSONDecodeError:
-            pass
-    return []
+    if not os.path.exists(DATA_FILE):
+        return []
+
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = f.read().strip()
+            if not data:
+                return []
+            return json.loads(data)
+    except (json.JSONDecodeError, OSError):
+        return []
 
 
 def save_tasks(tasks):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(tasks, f, ensure_ascii=False, indent=2)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(tasks, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
 
 
 @app.get("/")
