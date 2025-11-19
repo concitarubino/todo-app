@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>To-Do App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>La mia To-Do App</h1>
+  
+      <form action="{{ url_for('add') }}" method="post" class="add-form">
+        <input type="text" name="task" placeholder="Nuova attività" required>
+        <button type="submit">Aggiungi</button>
+      </form>
+
+      <div class="stats">
+        <span>{{ active_count }} Da fare</span>
+        <span>· {{ completed_count }} Completate</span>
+        <span>· {{ total_count }} Totali</span>
+      </div>
+      
+      <div class="filters">
+        <span>Mostra:</span>
+      
+        <a href="{{ url_for('home', filter='all') }}"
+           class="{% if current_filter == 'all' %}active{% endif %}">
+          Tutte
+        </a>
+      
+        <a href="{{ url_for('home', filter='active') }}"
+           class="{% if current_filter == 'active' %}active{% endif %}">
+          Da fare
+        </a>
+      
+        <a href="{{ url_for('home', filter='completed') }}"
+           class="{% if current_filter == 'completed' %}active{% endif %}">
+          Completate
+        </a>
+      </div>
+
+      <form action="{{ url_for('clear_completed') }}" method="post" class="clear-form">
+        <button type="submit" class="clear-btn">Pulisci completate</button>
+      </form>      
+  
+      <ul>
+        {% for t in tasks %}
+          <li class="{% if t.done %}done{% endif %}">
+            
+            <form action="{{ url_for('toggle', idx=loop.index0) }}" method="post" class="toggle-form">
+              <label>
+                <input 
+                  type="checkbox" 
+                  {% if t.done %}checked{% endif %}
+                  onchange="this.form.submit()"
+                >
+                <span>{{ t.text }}</span>
+              </label>
+            </form>
+      
+            <a href="{{ url_for('delete', idx=loop.index0) }}" class="delete">[x]</a>
+      
+          </li>
+        {% else %}
+          <li>Nessuna attività</li>
+        {% endfor %}
+      </ul> 
+
+    </div>
+
+  </body>
+
+</html>
