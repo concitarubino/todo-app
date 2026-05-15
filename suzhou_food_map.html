@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Suzhou Food Map ≥4.3</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif} 
+  .panel{position:absolute;z-index:1000;left:10px;right:10px;top:10px;background:#fff;border-radius:16px;padding:10px 12px;box-shadow:0 6px 22px rgba(0,0,0,.20);max-height:42%;overflow:auto}
+  .title{font-weight:800;font-size:16px;margin-bottom:4px}.sub{font-size:12px;color:#555;line-height:1.35}.row{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.btn{border:0;border-radius:999px;padding:7px 10px;background:#eee;font-size:12px}.btn.active{background:#111;color:#fff}.loc{background:#1677ff;color:#fff}.list{font-size:13px}.item{padding:8px 0;border-top:1px solid #eee}.name{font-weight:700}.meta{font-size:12px;color:#555}.pill{display:inline-block;padding:2px 6px;border-radius:8px;background:#f2f2f2;margin:2px 2px 0 0;font-size:11px}.amap{display:inline-block;margin-top:4px;color:#0b66d8;text-decoration:none;font-weight:700}.leaflet-popup-content{font-size:13px}.warn{font-size:11px;color:#8a5a00;background:#fff7df;border-radius:8px;padding:6px;margin-top:6px}.bottom{position:absolute;z-index:1000;left:10px;right:10px;bottom:16px;display:flex;gap:8px}.bottom button{flex:1;border:0;border-radius:14px;padding:12px;background:#111;color:white;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <div class="title">Suzhou Food Map — rating ≥4.3</div>
+  <div class="sub">Ristoranti tipici, street food, noodles, bakery/dolci. Usa “Seguimi” per localizzazione live. I marker sono basati su posizione/indirizzo pubblico o zona nota; il pulsante Amap apre la navigazione precisa nell’app.</div>
+  <div class="warn">Nota: in Cina le recensioni cambiano spesso. Ho escluso i locali sotto 4.3 quando il rating pubblico era inferiore; alcuni Michelin/Bib sono inclusi come selezione autorevole anche se non hanno rating numerico pubblico unico.</div>
+  <div class="row" id="filters"></div>
+  <div class="list" id="list"></div>
+</div>
+<div class="bottom"><button onclick="locateMe()">📍 Seguimi live</button><button onclick="nearest()">Più vicini</button></div>
+<script>
+const places = [
+{name:'苏外婆·苏帮菜·松鼠桂鱼 平江路总店', it:'Su Waipo — cucina Suzhou', rating:'4.8 Trip.com', type:'Tipico', lat:31.3191,lng:120.6291, dishes:['松鼠桂鱼','蟹粉豆腐','苏式点心'], q:'苏外婆 苏帮菜 私房菜 松鼠桂鱼 平江路总店 苏州'},
+{name:'老苏州·苏州菜·松鼠桂鱼 平江路店', it:'Lao Suzhou — cucina locale', rating:'4.5 Dianping', type:'Tipico', lat:31.3177,lng:120.6290, dishes:['松鼠桂鱼','苏帮菜','响油鳝糊'], q:'老苏州 苏州菜 松鼠桂鱼 平江路店'},
+{name:'哑巴生煎 临顿路店', it:'YaBa ShengJian — street food', rating:'4.4 Tripadvisor / Bib Gourmand', type:'Street food', lat:31.3156,lng:120.6240, dishes:['生煎包','馄饨'], q:'哑巴生煎 临顿路店 苏州'},
+{name:'百年老字号·观振兴蟹黄面·苏式面', it:'Guan Zhen Xing — noodles', rating:'4.7 Dianping', type:'Noodles', lat:31.3128,lng:120.6199, dishes:['蟹黄面','爆鱼面','三虾面'], q:'观振兴蟹黄面 苏式面 苏州'},
+{name:'绣园苏式火锅 观前店', it:'Xiuyuan hotpot stile Suzhou', rating:'4.6 Dianping', type:'Tipico', lat:31.3134,lng:120.6194, dishes:['腌笃鲜锅底','熏鱼','桂花甜酒'], q:'绣园苏式火锅 观前店'},
+{name:'松鹤楼 观前店', it:'Songhelou — storico', rating:'storico / molto recensito', type:'Tipico', lat:31.3132,lng:120.6217, dishes:['松鼠桂鱼','苏帮菜'], q:'松鹤楼 观前店 苏州'},
+{name:'得月楼 观前店', it:'Deyuelou — storico', rating:'storico / molto recensito', type:'Tipico', lat:31.3138,lng:120.6193, dishes:['松鼠桂鱼','清炒虾仁'], q:'得月楼 观前店 苏州'},
+{name:'协和菜馆 观前街', it:'Xiehe — cucina tradizionale', rating:'classico locale', type:'Tipico', lat:31.3124,lng:120.6212, dishes:['苏帮菜','响油鳝糊'], q:'协和菜馆 观前街 苏州'},
+{name:'平江松', it:'Pingjiangsong — Michelin 1 stella', rating:'Michelin 2026', type:'Fine dining', lat:31.3197,lng:120.6297, dishes:['Jiangsu moderno','stagionale'], q:'平江松 苏州'},
+{name:'Gusu Fusion 姑苏小宴/姑苏融合', it:'Gusu Fusion — Bib Gourmand', rating:'Michelin Bib Gourmand 2026', type:'Tipico', lat:31.3094,lng:120.6246, dishes:['苏帮菜 moderna','stagionale'], q:'Gusu Fusion 苏州 姑苏'},
+{name:'鱼食饭稻土灶 平江路店', it:'Yushifan Daotuzao', rating:'4.3 Tripadvisor area', type:'Tipico', lat:31.3185,lng:120.6296, dishes:['江浙菜','piatti locali'], q:'鱼食饭稻土灶 平江路店 苏州'},
+{name:'裕兴记面馆 西北街店', it:'Yu Xing Ji — noodles Suzhou', rating:'molto recensito', type:'Noodles', lat:31.3231,lng:120.6255, dishes:['三虾面','蟹粉面','苏式面'], q:'裕兴记面馆 西北街店 苏州'},
+{name:'同得兴精品面馆 十全街店', it:'Tong De Xing — noodles', rating:'molto recensito', type:'Noodles', lat:31.2983,lng:120.6251, dishes:['白汤面','红汤面','焖肉面'], q:'同得兴精品面馆 十全街店 苏州'},
+{name:'潘玉麟糖粥铺 平江路', it:'Pan Yulin — dessert storico', rating:'street dessert famoso', type:'Dolci', lat:31.3180,lng:120.6299, dishes:['糖粥','赤豆小圆子','桂花'], q:'潘玉麟糖粥铺 平江路 苏州'},
+{name:'许家门酒酿饼 平江路', it:'Xujiamen — dolce tipico', rating:'street food famoso', type:'Dolci', lat:31.3174,lng:120.6297, dishes:['酒酿饼','苏式糕点'], q:'许家门酒酿饼 平江路 苏州'},
+{name:'采芝斋 观前街', it:'Cai Zhi Zhai — pasticceria storica', rating:'老字号 storico', type:'Bakery', lat:31.3130,lng:120.6199, dishes:['苏式糖果','糕点','粽子糖'], q:'采芝斋 观前街 苏州'},
+{name:'稻香村 观前街店', it:'Daoxiangcun — pasticceria Suzhou', rating:'老字号 storico', type:'Bakery', lat:31.3136,lng:120.6205, dishes:['苏式月饼','糕点'], q:'稻香村 观前街店 苏州'},
+{name:'长发西饼 观前店', it:'Changfa Bakery', rating:'bakery locale famosa', type:'Bakery', lat:31.3131,lng:120.6188, dishes:['鲜肉月饼','蛋挞','面包'], q:'长发西饼 观前店 苏州'},
+{name:'黄天源糕团店 观前街', it:'Huang Tian Yuan — dolci di riso', rating:'老字号 storico', type:'Dolci', lat:31.3129,lng:120.6200, dishes:['糕团','青团','桂花糕'], q:'黄天源糕团店 观前街 苏州'},
+{name:'万福兴糕团店', it:'Wan Fu Xing — dolci locali', rating:'老字号 storico', type:'Dolci', lat:31.3094,lng:120.6135, dishes:['苏式糕团','定胜糕'], q:'万福兴糕团店 苏州'}
+];
+const cats=['Tutti','Tipico','Street food','Noodles','Dolci','Bakery','Fine dining'];
+const map=L.map('map',{zoomControl:false}).setView([31.3158,120.6255],15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+let group=L.layerGroup().addTo(map), userMarker=null, userCircle=null, currentCat='Tutti', lastPos=null;
+function amapLink(q){return 'https://uri.amap.com/search?keyword='+encodeURIComponent(q)+'&city='+encodeURIComponent('苏州')+'&callnative=1'}
+function render(){group.clearLayers(); const list=document.getElementById('list'); list.innerHTML=''; let arr=places.filter(p=>currentCat==='Tutti'||p.type===currentCat); arr.forEach((p,i)=>{const m=L.marker([p.lat,p.lng]).addTo(group); const tags=p.dishes.map(d=>`<span class="pill">${d}</span>`).join(''); m.bindPopup(`<b>${i+1}. ${p.name}</b><br>${p.it}<br>Rating: ${p.rating}<br>${tags}<br><a class="amap" href="${amapLink(p.q)}" target="_blank">Apri in Amap</a>`); const div=document.createElement('div'); div.className='item'; div.innerHTML=`<div class="name">${i+1}. ${p.it}</div><div class="meta">${p.name}<br>Rating: ${p.rating} · ${p.type}</div>${tags}<br><a class="amap" href="${amapLink(p.q)}" target="_blank">Apri in Amap</a>`; div.onclick=()=>{map.setView([p.lat,p.lng],17);m.openPopup()}; list.appendChild(div);});}
+function buildFilters(){const f=document.getElementById('filters'); cats.forEach(c=>{const b=document.createElement('button'); b.className='btn'+(c==='Tutti'?' active':''); b.textContent=c; b.onclick=()=>{currentCat=c; document.querySelectorAll('.btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); render();}; f.appendChild(b);});}
+function locateMe(){ if(!navigator.geolocation){alert('GPS non disponibile nel browser');return;} navigator.geolocation.watchPosition(pos=>{lastPos=[pos.coords.latitude,pos.coords.longitude]; if(!userMarker){userMarker=L.marker(lastPos).addTo(map).bindPopup('Tu sei qui'); userCircle=L.circle(lastPos,{radius:pos.coords.accuracy||30}).addTo(map);} else {userMarker.setLatLng(lastPos); userCircle.setLatLng(lastPos).setRadius(pos.coords.accuracy||30);} map.setView(lastPos,16);},err=>alert('Errore GPS: '+err.message+'\nSu iPhone abilita posizione per Safari/Chrome e apri il file con HTTPS se possibile.'),{enableHighAccuracy:true,maximumAge:5000,timeout:10000});}
+function nearest(){ if(!lastPos){locateMe(); alert('Attivo il GPS. Premi di nuovo “Più vicini” dopo che compare la posizione.'); return;} const dist=(p)=>{const R=6371e3, a=lastPos[0]*Math.PI/180, b=p.lat*Math.PI/180, d1=(p.lat-lastPos[0])*Math.PI/180, d2=(p.lng-lastPos[1])*Math.PI/180; const x=Math.sin(d1/2)**2+Math.cos(a)*Math.cos(b)*Math.sin(d2/2)**2; return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}; places.sort((a,b)=>dist(a)-dist(b)); render(); const p=places[0]; map.setView([p.lat,p.lng],17);}
+buildFilters(); render();
+</script>
+</body>
+</html>
